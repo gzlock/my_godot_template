@@ -1,1 +1,1 @@
-# my_godot_template
+# 自用于游戏加密的godot模板
