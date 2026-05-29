@@ -7,10 +7,14 @@ on:
 jobs:
   build-windows-template:
     runs-on: windows-2022
+    
+    # 使用矩阵策略并行编译三种架构
+    strategy:
+      matrix:
+        arch: [x86_32, x86_64, arm64]
 
     env:
-      GODOT_TAG: 4.6.2-stable
-      GODOT_ARCH: x86_64
+      GODOT_TAG: 4.6.3-stable
       SCRIPT_AES256_ENCRYPTION_KEY: ${{ secrets.GODOT_AES_KEY }}
 
     steps:
@@ -30,18 +34,20 @@ jobs:
         shell: pwsh
         run: |
           cd godot
-          scons platform=windows target=template_release arch=$env:GODOT_ARCH production=yes d3d12=no
+          # 注意：Godot 4.x 的 SCons 参数中，x86 对应的参数名为 x86_32
+          scons platform=windows target=template_release arch=${{ matrix.arch }} production=yes d3d12=no
 
       - name: Build debug template
         shell: pwsh
         run: |
           cd godot
-          scons platform=windows target=template_debug arch=$env:GODOT_ARCH d3d12=no
+          scons platform=windows target=template_debug arch=${{ matrix.arch }} d3d12=no
 
+      # 将每种架构分别打包上传，避免文件名冲突
       - name: Upload templates
         uses: actions/upload-artifact@v4
         with:
-          name: godot-windows-templates-${{ env.GODOT_TAG }}
+          name: godot-windows-templates-${{ matrix.arch }}-${{ env.GODOT_TAG }}
           path: |
-            godot/bin/godot.windows.template_release.x86_64.exe
-            godot/bin/godot.windows.template_debug.x86_64.exe
+            godot/bin/godot.windows.template_release.${{ matrix.arch }}.exe
+            godot/bin/godot.windows.template_debug.${{ matrix.arch }}.exe
